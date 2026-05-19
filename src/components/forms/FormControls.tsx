@@ -1,0 +1,774 @@
+import {
+  ActivityIndicator,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  View
+} from "react-native";
+import * as Clipboard from "expo-clipboard";
+import * as FileSystem from "expo-file-system";
+import * as Sharing from "expo-sharing";
+
+import { colors, radii, spacing, typography } from "../../theme";
+import type { GenerationMode } from "../../utils/generateContent";
+import { formatSavedOutputDate } from "../../utils/outputHistory";
+import { SUBJECT_OPTIONS } from "../../utils/teacherSettings";
+
+type FormFieldProps = {
+  autoCapitalize?: "none" | "sentences" | "words" | "characters";
+  helperText?: string;
+  keyboardType?: "default" | "email-address" | "numeric";
+  label: string;
+  multiline?: boolean;
+  onChangeText: (value: string) => void;
+  placeholder: string;
+  value: string;
+};
+
+type SelectOption = {
+  label: string;
+  value: string;
+};
+
+type SegmentedSelectorProps = {
+  label: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+  value: string;
+};
+
+type CheckboxOption = {
+  label: string;
+  value: string;
+};
+
+type CheckboxGroupProps = {
+  label: string;
+  onToggle: (value: string) => void;
+  options: CheckboxOption[];
+  values: string[];
+};
+
+type GenerateButtonProps = {
+  disabled?: boolean;
+  label?: string;
+  loading?: boolean;
+  loadingLabel?: string;
+  onPress: () => void;
+};
+
+export function FormField({
+  autoCapitalize = "sentences",
+  helperText,
+  keyboardType = "default",
+  label,
+  multiline = false,
+  onChangeText,
+  placeholder,
+  value
+}: FormFieldProps) {
+  return (
+    <View style={styles.group}>
+      <Text style={styles.label}>{label}</Text>
+      <TextInput
+        autoCapitalize={autoCapitalize}
+        keyboardType={keyboardType}
+        multiline={multiline}
+        onChangeText={onChangeText}
+        placeholder={placeholder}
+        placeholderTextColor={colors.textMuted}
+        selectionColor={colors.accent}
+        style={[styles.input, multiline && styles.inputMultiline]}
+        textAlignVertical={multiline ? "top" : "center"}
+        value={value}
+      />
+      {helperText ? <Text style={styles.helperText}>{helperText}</Text> : null}
+    </View>
+  );
+}
+
+export function SegmentedSelector({
+  label,
+  onChange,
+  options,
+  value
+}: SegmentedSelectorProps) {
+  return (
+    <View style={styles.group}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.segmentRow}>
+        {options.map((option) => {
+          const selected = option.value === value;
+
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="button"
+              onPress={() => onChange(option.value)}
+              style={[styles.segment, selected && styles.segmentSelected]}
+            >
+              <Text
+                style={[
+                  styles.segmentLabel,
+                  selected && styles.segmentLabelSelected
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export function CheckboxGroup({
+  label,
+  onToggle,
+  options,
+  values
+}: CheckboxGroupProps) {
+  return (
+    <View style={styles.group}>
+      <Text style={styles.label}>{label}</Text>
+      <View style={styles.checkboxWrap}>
+        {options.map((option) => {
+          const selected = values.includes(option.value);
+
+          return (
+            <Pressable
+              key={option.value}
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: selected }}
+              onPress={() => onToggle(option.value)}
+              style={[styles.checkbox, selected && styles.checkboxSelected]}
+            >
+              <View
+                style={[styles.checkboxMark, selected && styles.checkboxMarkOn]}
+              />
+              <Text
+                style={[
+                  styles.checkboxLabel,
+                  selected && styles.checkboxLabelSelected
+                ]}
+              >
+                {option.label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+    </View>
+  );
+}
+
+export function GenerateButton({
+  disabled = false,
+  label = "Generate",
+  loading = false,
+  loadingLabel = "Generating...",
+  onPress
+}: GenerateButtonProps) {
+  return (
+    <Pressable
+      accessibilityRole="button"
+      disabled={disabled || loading}
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.generateButton,
+        (disabled || loading) && styles.generateButtonDisabled,
+        pressed && styles.generateButtonPressed
+      ]}
+    >
+      <View style={styles.generateContent}>
+        {loading ? (
+          <ActivityIndicator color={colors.background} size="small" />
+        ) : null}
+        <Text style={styles.generateLabel}>
+          {loading ? loadingLabel : label}
+        </Text>
+      </View>
+    </Pressable>
+  );
+}
+
+type SubjectChipRowProps = {
+  onSelect: (subject: string) => void;
+  value: string;
+};
+
+export function SubjectChipRow({ onSelect, value }: SubjectChipRowProps) {
+  return (
+    <View style={styles.group}>
+      <Text style={styles.label}>Quick Subject Fill</Text>
+      <ScrollView
+        horizontal
+        contentContainerStyle={styles.subjectChipRow}
+        showsHorizontalScrollIndicator={false}
+      >
+        {SUBJECT_OPTIONS.map((subjectOption) => {
+          const selected = subjectOption === value;
+
+          return (
+            <Pressable
+              key={subjectOption}
+              accessibilityRole="button"
+              onPress={() => onSelect(subjectOption)}
+              style={[
+                styles.subjectChip,
+                selected && styles.subjectChipSelected
+              ]}
+            >
+              <Text
+                style={[
+                  styles.subjectChipLabel,
+                  selected && styles.subjectChipLabelSelected
+                ]}
+              >
+                {subjectOption}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
+}
+
+type TeacherFieldGroupProps = {
+  gradeLevel: string;
+  onChangeGradeLevel: (value: string) => void;
+  onChangeSubject: (value: string) => void;
+  subject: string;
+};
+
+export function TeacherFieldGroup({
+  gradeLevel,
+  onChangeGradeLevel,
+  onChangeSubject,
+  subject
+}: TeacherFieldGroupProps) {
+  return (
+    <>
+      <SubjectChipRow onSelect={onChangeSubject} value={subject} />
+      <FormField
+        autoCapitalize="words"
+        label="Subject"
+        onChangeText={onChangeSubject}
+        placeholder="Ex: Algebra I"
+        value={subject}
+      />
+      <FormField
+        autoCapitalize="words"
+        label="Grade Level"
+        onChangeText={onChangeGradeLevel}
+        placeholder="Ex: 8th Grade"
+        value={gradeLevel}
+      />
+    </>
+  );
+}
+
+type InlineErrorProps = {
+  message: string;
+};
+
+export function InlineError({ message }: InlineErrorProps) {
+  if (!message) {
+    return null;
+  }
+
+  return (
+    <View style={styles.errorBox}>
+      <Text style={styles.errorText}>{message}</Text>
+    </View>
+  );
+}
+
+type ResultCardProps = {
+  createdAt?: string;
+  expandContent?: boolean;
+  mode?: GenerationMode;
+  onRegenerate?: () => void;
+  text: string;
+};
+
+type ParsedLine =
+  | { key: string; type: "blank" }
+  | { key: string; type: "body"; value: string }
+  | { key: string; type: "header"; value: string }
+  | { key: string; type: "numbered"; value: string }
+  | { cells: string[]; isHeader: boolean; key: string; type: "tableRow" };
+
+function sanitizeFilenamePart(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+}
+
+function parseStructuredOutput(text: string) {
+  return text.split(/\r?\n/).map<ParsedLine>((line, index) => {
+    const trimmedLine = line.trim();
+    const key = `${index}-${trimmedLine}`;
+
+    if (!trimmedLine) {
+      return { key, type: "blank" };
+    }
+
+    const tableCells = trimmedLine
+      .split("|")
+      .map((cell) => cell.trim())
+      .filter(Boolean);
+
+    if (tableCells.length >= 2 && tableCells.every((cell) => /^-+$/.test(cell))) {
+      return { key, type: "blank" };
+    }
+
+    if (tableCells.length >= 2) {
+      return {
+        cells: tableCells,
+        isHeader: tableCells.some((cell) =>
+          /student|original|curved|score|letter|grade|range|count|average/i.test(
+            cell
+          )
+        ),
+        key,
+        type: "tableRow"
+      };
+    }
+
+    if (/^[A-Z][A-Za-z0-9 /()-]*:/.test(trimmedLine)) {
+      return { key, type: "header", value: trimmedLine };
+    }
+
+    if (/^\d+\.\s+/.test(trimmedLine)) {
+      return { key, type: "numbered", value: trimmedLine };
+    }
+
+    return { key, type: "body", value: trimmedLine };
+  });
+}
+
+async function shareOutputAsTextFile(
+  mode: GenerationMode,
+  text: string,
+  createdAt?: string
+) {
+  const isSharingAvailable = await Sharing.isAvailableAsync();
+
+  if (!isSharingAvailable) {
+    return;
+  }
+
+  const baseDirectory =
+    FileSystem.cacheDirectory ?? FileSystem.documentDirectory;
+
+  if (!baseDirectory) {
+    return;
+  }
+
+  const timestamp = (createdAt ?? new Date().toISOString()).replace(
+    /[:.]/g,
+    "-"
+  );
+  const filename = `${sanitizeFilenamePart(mode)}-${timestamp}.txt`;
+  const fileUri = `${baseDirectory}${filename}`;
+
+  await FileSystem.writeAsStringAsync(fileUri, text, {
+    encoding: FileSystem.EncodingType.UTF8
+  });
+
+  await Sharing.shareAsync(fileUri, {
+    dialogTitle: `${mode} Output`,
+    mimeType: "text/plain",
+    UTI: "public.plain-text"
+  });
+}
+
+export function ResultCard({
+  createdAt,
+  expandContent = false,
+  mode,
+  onRegenerate,
+  text
+}: ResultCardProps) {
+  if (!text) {
+    return null;
+  }
+
+  const parsedLines = parseStructuredOutput(text);
+
+  return (
+    <View style={styles.resultCard}>
+      <View style={styles.resultHeader}>
+        <View style={styles.resultHeading}>
+          <Text style={styles.resultTitle}>Generated Output</Text>
+          {createdAt ? (
+            <Text style={styles.resultMeta}>
+              {formatSavedOutputDate(createdAt)}
+            </Text>
+          ) : null}
+        </View>
+        <View style={styles.actionRow}>
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => Clipboard.setStringAsync(text)}
+            style={({ pressed }) => [
+              styles.actionButton,
+              pressed && styles.actionButtonPressed
+            ]}
+          >
+            <Text style={styles.actionLabel}>Copy</Text>
+          </Pressable>
+          {mode ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => shareOutputAsTextFile(mode, text, createdAt)}
+              style={({ pressed }) => [
+                styles.actionButton,
+                pressed && styles.actionButtonPressed
+              ]}
+            >
+              <Text style={styles.actionLabel}>Share</Text>
+            </Pressable>
+          ) : null}
+          {onRegenerate ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={onRegenerate}
+              style={({ pressed }) => [
+                styles.actionButtonAccent,
+                pressed && styles.actionButtonPressed
+              ]}
+            >
+              <Text style={styles.actionLabelAccent}>Regenerate</Text>
+            </Pressable>
+          ) : null}
+        </View>
+      </View>
+      <ScrollView nestedScrollEnabled style={expandContent ? undefined : styles.resultScroll}>
+        <View style={styles.resultBody}>
+          {parsedLines.map((line) => {
+            if (line.type === "blank") {
+              return <View key={line.key} style={styles.blankLine} />;
+            }
+
+            if (line.type === "header") {
+              return (
+                <Text key={line.key} style={styles.resultHeaderText}>
+                  {line.value}
+                </Text>
+              );
+            }
+
+            if (line.type === "numbered") {
+              return (
+                <Text key={line.key} style={styles.resultNumberedText}>
+                  {line.value}
+                </Text>
+              );
+            }
+
+            if (line.type === "tableRow") {
+              return (
+                <View
+                  key={line.key}
+                  style={[
+                    styles.tableRow,
+                    line.isHeader && styles.tableHeaderRow
+                  ]}
+                >
+                  {line.cells.map((cell, cellIndex) => (
+                    <Text
+                      key={`${line.key}-${cellIndex}`}
+                      style={[
+                        styles.tableCell,
+                        line.isHeader && styles.tableHeaderCell
+                      ]}
+                    >
+                      {cell}
+                    </Text>
+                  ))}
+                </View>
+              );
+            }
+
+            return (
+              <Text key={line.key} style={styles.resultText}>
+                {line.value}
+              </Text>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  actionButton: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: spacing.md
+  },
+  actionButtonAccent: {
+    alignItems: "center",
+    backgroundColor: "rgba(143, 29, 44, 0.16)",
+    borderColor: colors.accent,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: spacing.md
+  },
+  actionButtonPressed: {
+    opacity: 0.9
+  },
+  actionLabel: {
+    color: colors.text,
+    ...typography.labelSmall
+  },
+  actionLabelAccent: {
+    color: colors.accentSoft,
+    ...typography.labelSmall
+  },
+  actionRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: spacing.xs
+  },
+  blankLine: {
+    height: spacing.sm
+  },
+  checkbox: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    flexDirection: "row",
+    gap: spacing.md,
+    minHeight: 52,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14
+  },
+  checkboxLabel: {
+    color: colors.text,
+    flex: 1,
+    fontSize: typography.body.fontSize,
+    fontWeight: "600"
+  },
+  checkboxLabelSelected: {
+    color: colors.white
+  },
+  checkboxMark: {
+    backgroundColor: "transparent",
+    borderColor: colors.textMuted,
+    borderRadius: 6,
+    borderWidth: 1.5,
+    height: 18,
+    width: 18
+  },
+  checkboxMarkOn: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent
+  },
+  checkboxSelected: {
+    borderColor: colors.accent
+  },
+  checkboxWrap: {
+    gap: spacing.md
+  },
+  errorBox: {
+    backgroundColor: "rgba(217, 86, 86, 0.12)",
+    borderColor: colors.danger,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: spacing.md
+  },
+  errorText: {
+    color: colors.dangerSoft,
+    ...typography.bodySmall
+  },
+  generateButton: {
+    alignItems: "center",
+    backgroundColor: colors.accent,
+    borderColor: colors.accentSoft,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    justifyContent: "center",
+    marginTop: spacing.xs,
+    minHeight: 56,
+    paddingHorizontal: spacing.xl
+  },
+  generateButtonDisabled: {
+    opacity: 0.55
+  },
+  generateContent: {
+    alignItems: "center",
+    flexDirection: "row",
+    gap: spacing.sm,
+    justifyContent: "center"
+  },
+  generateButtonPressed: {
+    opacity: 0.92
+  },
+  generateLabel: {
+    color: colors.accentContrast,
+    ...typography.button
+  },
+  group: {
+    gap: spacing.sm
+  },
+  helperText: {
+    color: colors.textMuted,
+    fontSize: 13,
+    lineHeight: 18
+  },
+  input: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    color: colors.text,
+    fontSize: typography.body.fontSize,
+    minHeight: 54,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: 14
+  },
+  inputMultiline: {
+    minHeight: 124
+  },
+  label: {
+    color: colors.white,
+    ...typography.label
+  },
+  resultCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.xl,
+    borderWidth: 1,
+    gap: spacing.md,
+    marginTop: spacing.xs,
+    padding: spacing.lg
+  },
+  resultBody: {
+    gap: 6,
+    paddingRight: 4
+  },
+  resultHeader: {
+    gap: spacing.md
+  },
+  resultHeaderText: {
+    color: colors.white,
+    fontSize: typography.body.fontSize,
+    fontWeight: "800",
+    lineHeight: 24,
+    marginTop: 4
+  },
+  resultHeading: {
+    gap: spacing.xxs
+  },
+  resultMeta: {
+    color: colors.textMuted,
+    ...typography.meta
+  },
+  resultNumberedText: {
+    color: colors.text,
+    ...typography.bodySmall,
+    paddingLeft: spacing.md
+  },
+  resultScroll: {
+    maxHeight: 280
+  },
+  resultText: {
+    color: colors.text,
+    ...typography.bodySmall
+  },
+  resultTitle: {
+    color: colors.white,
+    ...typography.label
+  },
+  segment: {
+    alignItems: "center",
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    flex: 1,
+    justifyContent: "center",
+    minHeight: 48,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  segmentLabel: {
+    color: colors.textMuted,
+    ...typography.labelSmall
+  },
+  segmentLabelSelected: {
+    color: colors.accentContrast
+  },
+  segmentRow: {
+    flexDirection: "row",
+    gap: spacing.sm
+  },
+  segmentSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent
+  },
+  subjectChip: {
+    alignItems: "center",
+    backgroundColor: colors.surface,
+    borderColor: colors.borderStrong,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    justifyContent: "center",
+    minHeight: 38,
+    paddingHorizontal: 14
+  },
+  subjectChipLabel: {
+    color: colors.textMuted,
+    ...typography.labelSmall
+  },
+  subjectChipLabelSelected: {
+    color: colors.accentContrast
+  },
+  subjectChipRow: {
+    gap: spacing.xs,
+    paddingRight: spacing.xl
+  },
+  subjectChipSelected: {
+    backgroundColor: colors.accent,
+    borderColor: colors.accent
+  },
+  tableCell: {
+    color: colors.text,
+    flex: 1,
+    fontSize: 13,
+    lineHeight: 18,
+    paddingHorizontal: spacing.xs,
+    paddingVertical: spacing.xs
+  },
+  tableHeaderCell: {
+    color: colors.white,
+    fontWeight: "800"
+  },
+  tableHeaderRow: {
+    backgroundColor: colors.surface
+  },
+  tableRow: {
+    backgroundColor: "rgba(255, 255, 255, 0.03)",
+    borderColor: colors.borderStrong,
+    borderRadius: radii.sm,
+    borderWidth: 1,
+    flexDirection: "row",
+    overflow: "hidden"
+  }
+});

@@ -1,5 +1,11 @@
 import "react-native-gesture-handler";
 
+import { Platform } from "react-native";
+
+if (Platform.OS === "web") {
+  require("katex/dist/katex.min.css");
+}
+
 import { StatusBar } from "expo-status-bar";
 import { NavigationContainer, DefaultTheme } from "@react-navigation/native";
 import { SafeAreaProvider } from "react-native-safe-area-context";

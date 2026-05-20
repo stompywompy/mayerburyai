@@ -11,6 +11,7 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
+import { MarkdownOutput } from "../MarkdownOutput";
 import { colors, radii, spacing, typography } from "../../theme";
 import type { GenerationMode } from "../../utils/generateContent";
 import { formatSavedOutputDate } from "../../utils/outputHistory";
@@ -296,58 +297,8 @@ type ResultCardProps = {
   text: string;
 };
 
-type ParsedLine =
-  | { key: string; type: "blank" }
-  | { key: string; type: "body"; value: string }
-  | { key: string; type: "header"; value: string }
-  | { key: string; type: "numbered"; value: string }
-  | { cells: string[]; isHeader: boolean; key: string; type: "tableRow" };
-
 function sanitizeFilenamePart(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-");
-}
-
-function parseStructuredOutput(text: string) {
-  return text.split(/\r?\n/).map<ParsedLine>((line, index) => {
-    const trimmedLine = line.trim();
-    const key = `${index}-${trimmedLine}`;
-
-    if (!trimmedLine) {
-      return { key, type: "blank" };
-    }
-
-    const tableCells = trimmedLine
-      .split("|")
-      .map((cell) => cell.trim())
-      .filter(Boolean);
-
-    if (tableCells.length >= 2 && tableCells.every((cell) => /^-+$/.test(cell))) {
-      return { key, type: "blank" };
-    }
-
-    if (tableCells.length >= 2) {
-      return {
-        cells: tableCells,
-        isHeader: tableCells.some((cell) =>
-          /student|original|curved|score|letter|grade|range|count|average/i.test(
-            cell
-          )
-        ),
-        key,
-        type: "tableRow"
-      };
-    }
-
-    if (/^[A-Z][A-Za-z0-9 /()-]*:/.test(trimmedLine)) {
-      return { key, type: "header", value: trimmedLine };
-    }
-
-    if (/^\d+\.\s+/.test(trimmedLine)) {
-      return { key, type: "numbered", value: trimmedLine };
-    }
-
-    return { key, type: "body", value: trimmedLine };
-  });
 }
 
 async function shareOutputAsTextFile(
@@ -396,8 +347,6 @@ export function ResultCard({
   if (!text) {
     return null;
   }
-
-  const parsedLines = parseStructuredOutput(text);
 
   return (
     <View style={styles.resultCard}>
@@ -449,57 +398,7 @@ export function ResultCard({
       </View>
       <ScrollView nestedScrollEnabled style={expandContent ? undefined : styles.resultScroll}>
         <View style={styles.resultBody}>
-          {parsedLines.map((line) => {
-            if (line.type === "blank") {
-              return <View key={line.key} style={styles.blankLine} />;
-            }
-
-            if (line.type === "header") {
-              return (
-                <Text key={line.key} style={styles.resultHeaderText}>
-                  {line.value}
-                </Text>
-              );
-            }
-
-            if (line.type === "numbered") {
-              return (
-                <Text key={line.key} style={styles.resultNumberedText}>
-                  {line.value}
-                </Text>
-              );
-            }
-
-            if (line.type === "tableRow") {
-              return (
-                <View
-                  key={line.key}
-                  style={[
-                    styles.tableRow,
-                    line.isHeader && styles.tableHeaderRow
-                  ]}
-                >
-                  {line.cells.map((cell, cellIndex) => (
-                    <Text
-                      key={`${line.key}-${cellIndex}`}
-                      style={[
-                        styles.tableCell,
-                        line.isHeader && styles.tableHeaderCell
-                      ]}
-                    >
-                      {cell}
-                    </Text>
-                  ))}
-                </View>
-              );
-            }
-
-            return (
-              <Text key={line.key} style={styles.resultText}>
-                {line.value}
-              </Text>
-            );
-          })}
+          <MarkdownOutput content={text} />
         </View>
       </ScrollView>
     </View>
@@ -666,13 +565,6 @@ const styles = StyleSheet.create({
   resultHeader: {
     gap: spacing.md
   },
-  resultHeaderText: {
-    color: colors.white,
-    fontSize: typography.body.fontSize,
-    fontWeight: "800",
-    lineHeight: 24,
-    marginTop: 4
-  },
   resultHeading: {
     gap: spacing.xxs
   },
@@ -680,17 +572,8 @@ const styles = StyleSheet.create({
     color: colors.textMuted,
     ...typography.meta
   },
-  resultNumberedText: {
-    color: colors.text,
-    ...typography.bodySmall,
-    paddingLeft: spacing.md
-  },
   resultScroll: {
     maxHeight: 280
-  },
-  resultText: {
-    color: colors.text,
-    ...typography.bodySmall
   },
   resultTitle: {
     color: colors.white,
@@ -748,27 +631,4 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderColor: colors.accent
   },
-  tableCell: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 13,
-    lineHeight: 18,
-    paddingHorizontal: spacing.xs,
-    paddingVertical: spacing.xs
-  },
-  tableHeaderCell: {
-    color: colors.white,
-    fontWeight: "800"
-  },
-  tableHeaderRow: {
-    backgroundColor: colors.surface
-  },
-  tableRow: {
-    backgroundColor: "rgba(255, 255, 255, 0.03)",
-    borderColor: colors.borderStrong,
-    borderRadius: radii.sm,
-    borderWidth: 1,
-    flexDirection: "row",
-    overflow: "hidden"
-  }
 });

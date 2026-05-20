@@ -1,5 +1,7 @@
 import "dotenv/config";
 
+import { normalizeAnthropicApiKey } from "./src/utils/anthropicApiKey";
+
 export default {
   expo: {
     name: "TeacherForge",
@@ -21,7 +23,7 @@ export default {
     },
     plugins: ["expo-asset"],
     extra: {
-      anthropicApiKey: process.env.ANTHROPIC_API_KEY ?? ""
+      anthropicApiKey: normalizeAnthropicApiKey(process.env.ANTHROPIC_API_KEY)
     }
   }
 };

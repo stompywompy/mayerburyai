@@ -12,7 +12,10 @@ export const theme = {
     borderStrong: "#5B2A32",
     white: "#FFFFFF",
     danger: "#D95656",
-    dangerSoft: "#FFC0C0"
+    dangerSoft: "#FFC0C0",
+    navy: "#0B1736",
+    amber: "#E8A838",
+    amberSoft: "#F5C86A"
   },
   spacing: {
     xxs: 4,

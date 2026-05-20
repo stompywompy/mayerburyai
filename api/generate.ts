@@ -1,4 +1,9 @@
-import { buildPrompt, type GenerationInputs, type GenerationMode } from "../src/utils/promptBuilder";
+import { normalizeAnthropicApiKey } from "../src/utils/anthropicApiKey";
+import {
+  buildAnthropicMessages,
+  type GenerationInputs,
+  type GenerationMode
+} from "../src/utils/promptBuilder";
 
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
@@ -18,7 +23,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(405).json({ error: { message: "Method not allowed" } });
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const apiKey = normalizeAnthropicApiKey(process.env.ANTHROPIC_API_KEY);
   if (!apiKey) {
     return res
       .status(500)
@@ -30,7 +35,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return res.status(400).json({ error: { message: "Missing mode or inputs." } });
   }
 
-  const prompt = buildPrompt(mode, inputs);
+  const { system, userMessage } = buildAnthropicMessages(mode, inputs);
 
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
@@ -42,7 +47,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
       max_tokens: 8192,
-      messages: [{ role: "user", content: prompt }]
+      system,
+      messages: [{ role: "user", content: userMessage }]
     })
   });
 

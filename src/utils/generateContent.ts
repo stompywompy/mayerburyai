@@ -1,20 +1,27 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
+import { normalizeAnthropicApiKey } from "./anthropicApiKey";
 import {
-  buildPrompt,
+  buildAnthropicMessages,
   type GenerationInputs,
   type GenerationMode
 } from "./promptBuilder";
 
 export type { GenerationInputs, GenerationMode } from "./promptBuilder";
 
-const ANTHROPIC_API_KEY =
-  Constants.expoConfig?.extra?.anthropicApiKey ?? "";
+const ANTHROPIC_API_KEY = normalizeAnthropicApiKey(
+  Constants.expoConfig?.extra?.anthropicApiKey
+);
 const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 
-async function callAnthropicDirect(prompt: string) {
+async function callAnthropicDirect(
+  mode: GenerationMode,
+  inputs: GenerationInputs
+) {
+  const { system, userMessage } = buildAnthropicMessages(mode, inputs);
+
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
     headers: {
@@ -25,7 +32,8 @@ async function callAnthropicDirect(prompt: string) {
     body: JSON.stringify({
       model: ANTHROPIC_MODEL,
       max_tokens: 8192,
-      messages: [{ role: "user", content: prompt }]
+      system,
+      messages: [{ role: "user", content: userMessage }]
     })
   });
 
@@ -79,8 +87,7 @@ export async function generateContent(
       );
     }
 
-    const prompt = buildPrompt(mode, inputs);
-    return await callAnthropicDirect(prompt);
+    return await callAnthropicDirect(mode, inputs);
   } catch (error) {
     if (error instanceof TypeError) {
       throw new Error(

@@ -14,6 +14,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { ModeCard } from "../components/ModeCard";
+import { stripMarkdownForPreview } from "../components/MarkdownOutput";
 import { SalisburyBrandHeader } from "../components/SalisburyBrandHeader";
 import { modeCards } from "../data/modes";
 import { colors, motion, radii, spacing, typography } from "../theme";
@@ -221,7 +222,7 @@ export function HomeScreen({ navigation }: Props) {
                     </Text>
                   </View>
                   <Text numberOfLines={3} style={styles.historyPreview}>
-                    {entry.text}
+                    {stripMarkdownForPreview(entry.text)}
                   </Text>
                 </Pressable>
               ))

@@ -8,6 +8,7 @@ import {
   serializeAnthropicRequestBody
 } from "./anthropicClient";
 import { normalizeAnthropicApiKey } from "./anthropicApiKey";
+import { devLog } from "./devLog";
 import {
   buildAnthropicMessages,
   type GenerationInputs,
@@ -59,7 +60,7 @@ async function callAnthropicViaProxy(mode: GenerationMode, inputs: GenerationInp
     requestBody = JSON.stringify({ mode, inputs });
     JSON.parse(requestBody);
   } catch (error) {
-    console.error("[Anthropic/proxy] Invalid proxy request JSON:", error);
+    devLog.error("[Anthropic/proxy] Invalid proxy request JSON:", error);
     throw new Error("Could not encode generation request as JSON.");
   }
 

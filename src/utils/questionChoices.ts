@@ -1,3 +1,5 @@
+import { sanitizeDisplayText } from "./sanitizeDisplayText";
+
 export type ItemChoice = {
   letter: string;
   text: string;
@@ -42,15 +44,27 @@ export function resolveItemDisplay(item: {
   choices?: ItemChoice[];
 }): ResolvedQuestionItem {
   if (item.choices && item.choices.length > 0) {
-    return { stem: item.text.trim(), choices: item.choices };
+    return {
+      stem: sanitizeDisplayText(item.text),
+      choices: item.choices.map((choice) => ({
+        letter: choice.letter,
+        text: sanitizeDisplayText(choice.text)
+      }))
+    };
   }
 
   const inline = splitInlineChoices(item.text);
   if (inline) {
-    return inline;
+    return {
+      stem: sanitizeDisplayText(inline.stem),
+      choices: inline.choices.map((choice) => ({
+        letter: choice.letter,
+        text: sanitizeDisplayText(choice.text)
+      }))
+    };
   }
 
-  return { stem: item.text, choices: [] };
+  return { stem: sanitizeDisplayText(item.text), choices: [] };
 }
 
 export function isQuestionSection(title: string) {

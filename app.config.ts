@@ -28,7 +28,7 @@ export default {
     },
     web: {
       bundler: "metro",
-      name: "TeacherForge"
+      name: "TeacherForge | Salisbury School"
     },
     plugins: ["expo-asset"],
     extra: {

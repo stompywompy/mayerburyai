@@ -10,13 +10,15 @@ import {
   type RubricRow
 } from "../utils/documentParser";
 import type { GenerationMode } from "../utils/generateContent";
+import { devLog } from "../utils/devLog";
 import { isQuestionSection, resolveItemDisplay } from "../utils/questionChoices";
+import { sanitizeDisplayText } from "../utils/sanitizeDisplayText";
 
 function safeParseDocument(content: string): ParsedDocument {
   try {
     return parseStructuredDocument(content);
   } catch (error) {
-    console.error("[DocumentRenderer] parseStructuredDocument threw:", error);
+    devLog.error("[DocumentRenderer] parseStructuredDocument threw:", error);
     return parseStructuredDocument(
       `[DOCUMENT TITLE: Generated Document]\n[SECTION: Generated Content]\n${content}`
     );
@@ -70,9 +72,15 @@ function RubricTable({ rows }: { rows: RubricRow[] }) {
           key={`${row.criteria}-${index}`}
           style={[styles.rubricRow, index % 2 === 1 && styles.altRow]}
         >
-          <Text style={[styles.rubricCell, styles.rubricCriteriaCell]}>{row.criteria}</Text>
-          <Text style={[styles.rubricCell, styles.rubricPointsCell]}>{row.points}</Text>
-          <Text style={[styles.rubricCell, styles.rubricDescCell]}>{row.description}</Text>
+          <Text style={[styles.rubricCell, styles.rubricCriteriaCell]}>
+            {sanitizeDisplayText(row.criteria)}
+          </Text>
+          <Text style={[styles.rubricCell, styles.rubricPointsCell]}>
+            {sanitizeDisplayText(row.points)}
+          </Text>
+          <Text style={[styles.rubricCell, styles.rubricDescCell]}>
+            {sanitizeDisplayText(row.description)}
+          </Text>
         </View>
       ))}
     </View>
@@ -124,7 +132,7 @@ function parseGradeCurveRow(text: string, fallbackNumber: number): GradeCurveRow
       studentNumber
     };
   } catch (error) {
-    console.warn("[DocumentRenderer] parseGradeCurveRow fallback:", error, text);
+    devLog.warn("[DocumentRenderer] parseGradeCurveRow fallback:", error, text);
     return {
       curvedScore: "-",
       letterGrade: "-",
@@ -331,7 +339,9 @@ function TestCorrectionBlocks({ parsed }: { parsed: ParsedDocument }) {
                 <Text style={styles.formatBadgeText}>{format}</Text>
               </View>
             </View>
-            <Text style={styles.originalQuestionText}>{item.text}</Text>
+            <Text style={styles.originalQuestionText}>
+              {sanitizeDisplayText(item.text)}
+            </Text>
             <Text style={styles.responsePrompt}>Correction Response:</Text>
             <CorrectionWritingLines />
           </View>
@@ -397,7 +407,7 @@ function renderDefaultSection(
       testID={/teacher\s*note/i.test(section.title) ? "teacher-note-section" : undefined}
     >
       <View style={styles.sectionBand}>
-        <Text style={styles.sectionTitle}>{section.title}</Text>
+        <Text style={styles.sectionTitle}>{sanitizeDisplayText(section.title)}</Text>
       </View>
 
       <View style={styles.sectionBody}>
@@ -405,7 +415,7 @@ function renderDefaultSection(
           if (block.type === "paragraph") {
             return (
               <Text key={`${sectionIndex}-p-${blockIndex}`} style={styles.paragraph}>
-                {block.text}
+                {sanitizeDisplayText(block.text)}
               </Text>
             );
           }
@@ -431,7 +441,7 @@ function renderDefaultSection(
                       key={`${sectionIndex}-a-${blockIndex}-${lineIndex}`}
                       style={styles.answerLine}
                     >
-                      {line}
+                      {sanitizeDisplayText(line)}
                     </Text>
                   ))}
               </View>
@@ -500,7 +510,7 @@ export function DocumentRenderer({
         <Text style={styles.metaText}>Date: {formatDate(createdAt)}</Text>
       </View>
 
-      <Text style={styles.documentTitle}>{parsed.title}</Text>
+      <Text style={styles.documentTitle}>{sanitizeDisplayText(parsed.title)}</Text>
 
       <View style={styles.contentWrap}>{renderParsedByMode(parsed, mode)}</View>
     </View>

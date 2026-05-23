@@ -203,13 +203,14 @@ export function FormScreen({
             {children}
             <Pressable
               accessibilityRole="button"
+              accessibilityState={{ busy: isLoading, disabled: isLoading }}
               disabled={isLoading}
               onPress={onGenerate}
               style={(state: any) => [
                 styles.generateButton,
-                state.hovered && styles.generateButtonHover,
+                state.hovered && !isLoading && styles.generateButtonHover,
                 isLoading && styles.generateButtonDisabled,
-                state.pressed && styles.generateButtonPressed
+                state.pressed && !isLoading && styles.generateButtonPressed
               ]}
             >
               <View style={styles.generateInner}>
@@ -238,7 +239,12 @@ export function FormScreen({
           </View>
 
           <View style={styles.outputBodyWrap}>
-            {!hasOutput ? (
+            {isLoading ? (
+              <View style={styles.outputLoading}>
+                <ActivityIndicator color={colors.accent} size="large" />
+                <Text style={styles.outputLoadingText}>Generating your document…</Text>
+              </View>
+            ) : !hasOutput ? (
               <OutputEmptyState />
             ) : (
               <ScrollView style={styles.outputScroll} contentContainerStyle={styles.outputContent}>
@@ -499,6 +505,18 @@ const styles = StyleSheet.create({
     backgroundColor: colors.surface,
     flex: 1,
     minHeight: 320
+  },
+  outputLoading: {
+    alignItems: "center",
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: "center",
+    minHeight: 320,
+    padding: spacing.xl
+  },
+  outputLoadingText: {
+    color: colors.textMuted,
+    ...typography.body
   },
   outputColumn: {
     borderColor: colors.border,

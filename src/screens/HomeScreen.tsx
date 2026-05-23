@@ -24,6 +24,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 
 import { TeacherForgeLogo } from "../components/TeacherForgeLogo";
+import { previewDisplayLine } from "../utils/sanitizeDisplayText";
 import {
   AbsenceClassworkGeneratorScreen,
   AssignmentBuilderScreen,
@@ -207,15 +208,6 @@ function DropdownField({ label, onSelect, options, value }: DropdownFieldProps) 
       ) : null}
     </View>
   );
-}
-
-function previewFirstLine(text: string) {
-  const first = text
-    .split(/\r?\n/)
-    .map((line) => line.replace(/^#{1,6}\s+/, "").trim())
-    .find((line) => line.length > 0);
-
-  return first ?? "Generated content";
 }
 
 export function HomeScreen({ navigation }: Props) {
@@ -570,7 +562,7 @@ export function HomeScreen({ navigation }: Props) {
                     {(entry.inputs?.Subject as string | undefined) || "Subject not set"} · {formatSavedOutputDate(entry.createdAt)}
                   </Text>
                   <Text numberOfLines={2} style={styles.historyPreview}>
-                    {previewFirstLine(entry.text)}
+                    {previewDisplayLine(entry.text)}
                   </Text>
                 </Pressable>
               ))

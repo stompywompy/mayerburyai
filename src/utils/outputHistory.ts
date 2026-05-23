@@ -63,7 +63,18 @@ export async function saveOutputEntry(
 
 export async function getSavedOutputEntries() {
   const rawIndex = await AsyncStorage.getItem(HISTORY_INDEX_KEY);
-  const entryIds: string[] = rawIndex ? JSON.parse(rawIndex) : [];
+  let entryIds: string[] = [];
+
+  if (rawIndex) {
+    try {
+      const parsed = JSON.parse(rawIndex) as unknown;
+      entryIds = Array.isArray(parsed)
+        ? parsed.filter((id): id is string => typeof id === "string")
+        : [];
+    } catch {
+      entryIds = [];
+    }
+  }
 
   if (entryIds.length === 0) {
     return [];

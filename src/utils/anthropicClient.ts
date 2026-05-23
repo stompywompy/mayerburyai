@@ -1,3 +1,5 @@
+import { devLog } from "./devLog";
+
 /** Anthropic Messages API model — must match console-enabled model id exactly. */
 export const ANTHROPIC_MODEL = "claude-sonnet-4-20250514" as const;
 
@@ -40,7 +42,7 @@ export function serializeAnthropicRequestBody(
     JSON.parse(json);
     return json;
   } catch (error) {
-    console.error("[Anthropic] Request body is not valid JSON:", error, body);
+    devLog.error("[Anthropic] Request body is not valid JSON:", error, body);
     throw new Error("Claude API request body could not be encoded as valid JSON.");
   }
 }
@@ -61,7 +63,7 @@ export async function parseAnthropicHttpJson(
   logLabel = "Anthropic"
 ): Promise<unknown> {
   const rawText = await response.text();
-  console.log(`[${logLabel}] Raw HTTP response (${response.status}):`, rawText.slice(0, 4000));
+  devLog.log(`[${logLabel}] Raw HTTP response (${response.status}):`, rawText.slice(0, 4000));
 
   if (!rawText.trim()) {
     throw new Error("Claude API returned an empty response body.");
@@ -70,7 +72,7 @@ export async function parseAnthropicHttpJson(
   try {
     return JSON.parse(rawText) as unknown;
   } catch (error) {
-    console.error(`[${logLabel}] JSON.parse failed:`, error);
+    devLog.error(`[${logLabel}] JSON.parse failed:`, error);
     const message =
       error instanceof Error ? error.message : "Unknown JSON parse error";
     throw new Error(
@@ -83,7 +85,7 @@ export function extractAnthropicText(
   data: unknown,
   logLabel = "Anthropic"
 ): string {
-  console.log(`[${logLabel}] Parsed response object:`, safeStringify(data));
+  devLog.log(`[${logLabel}] Parsed response object:`, safeStringify(data));
 
   try {
     if (!data || typeof data !== "object") {
@@ -124,7 +126,7 @@ export function extractAnthropicText(
           return blockText;
         }
       } catch (blockError) {
-        console.warn(
+        devLog.warn(
           `[${logLabel}] Skipping malformed content block at index ${index}:`,
           blockError,
           block
@@ -137,19 +139,17 @@ export function extractAnthropicText(
       if (firstBlock && typeof firstBlock === "object") {
         const legacyText = (firstBlock as Record<string, unknown>).text;
         if (typeof legacyText === "string" && legacyText.trim()) {
-          console.warn(
-            `[${logLabel}] Using legacy content[0].text fallback.`
-          );
+          devLog.warn(`[${logLabel}] Using legacy content[0].text fallback.`);
           return legacyText;
         }
       }
     } catch (legacyError) {
-      console.warn(`[${logLabel}] content[0].text fallback failed:`, legacyError);
+      devLog.warn(`[${logLabel}] content[0].text fallback failed:`, legacyError);
     }
 
     throw new Error("No text content was returned by Claude.");
   } catch (error) {
-    console.error(`[${logLabel}] extractAnthropicText failed:`, error, data);
+    devLog.error(`[${logLabel}] extractAnthropicText failed:`, error, data);
     if (error instanceof Error) {
       throw error;
     }

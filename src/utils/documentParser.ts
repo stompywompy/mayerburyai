@@ -1,4 +1,6 @@
+import { devLog } from "./devLog";
 import type { ItemChoice } from "./questionChoices";
+import { sanitizeDisplayText } from "./sanitizeDisplayText";
 
 export type DocumentBlock =
   | { type: "paragraph"; text: string }
@@ -33,13 +35,13 @@ function safeMatch(line: string, pattern: RegExp) {
   try {
     return line.match(pattern);
   } catch (error) {
-    console.warn("[documentParser] RegExp match failed:", error, pattern);
+    devLog.warn("[documentParser] RegExp match failed:", error, pattern);
     return null;
   }
 }
 
 function pushParagraph(sections: DocumentSection[], sectionIndex: number, paragraph: string[]) {
-  const text = paragraph.join(" ").replace(/\s+/g, " ").trim();
+  const text = sanitizeDisplayText(paragraph.join(" ").replace(/\s+/g, " "));
   if (!text) {
     return;
   }
@@ -79,7 +81,7 @@ function appendChoiceToLastItem(
 
 function createFallbackDocument(raw: string, reason?: unknown): ParsedDocument {
   if (reason) {
-    console.warn("[documentParser] Using fallback layout:", reason);
+    devLog.warn("[documentParser] Using fallback layout:", reason);
   }
 
   const trimmed = raw.trim();
@@ -216,7 +218,7 @@ function parseStructuredDocumentInternal(raw: string): ParsedDocument {
       itemCounter += 1;
       sections[currentSectionIndex].blocks.push({
         type: "item",
-        text: itemMatch[1]?.trim() ?? "",
+        text: sanitizeDisplayText(itemMatch[1]?.trim() ?? ""),
         number: itemCounter,
         choices: []
       });
@@ -229,7 +231,7 @@ function parseStructuredDocumentInternal(raw: string): ParsedDocument {
         sections,
         currentSectionIndex,
         choiceMatch[1],
-        choiceMatch[2]?.trim() ?? ""
+        sanitizeDisplayText(choiceMatch[2]?.trim() ?? "")
       );
       continue;
     }
@@ -296,14 +298,14 @@ function parseStructuredDocumentInternal(raw: string): ParsedDocument {
 
 export function parseStructuredDocument(raw: string): ParsedDocument {
   if (typeof raw !== "string") {
-    console.error("[documentParser] Expected string input, received:", typeof raw);
+    devLog.error("[documentParser] Expected string input, received:", typeof raw);
     return createFallbackDocument("", "non-string input");
   }
 
   try {
     return parseStructuredDocumentInternal(raw);
   } catch (error) {
-    console.error("[documentParser] Parse failed; returning fallback document:", error);
+    devLog.error("[documentParser] Parse failed; returning fallback document:", error);
     return createFallbackDocument(raw, error);
   }
 }

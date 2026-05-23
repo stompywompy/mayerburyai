@@ -1,10 +1,9 @@
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { ScrollView, StyleSheet } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
-import { SalisburyBrandHeader } from "../components/SalisburyBrandHeader";
 import { ResultCard } from "../components/forms/FormControls";
-import { colors, spacing } from "../theme";
+import { colors, radii, spacing, typography } from "../theme";
 import { RootStackParamList } from "../types/navigation";
 
 type Props = NativeStackScreenProps<RootStackParamList, "HistoryDetail">;
@@ -15,7 +14,9 @@ export function HistoryDetailScreen({ route }: Props) {
   return (
     <SafeAreaView edges={["bottom"]} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content}>
-        <SalisburyBrandHeader subtitle="Saved TeacherForge output" />
+        <View style={styles.headerCard}>
+          <Text style={styles.title}>Saved TeacherForge Output</Text>
+        </View>
         <ResultCard
           createdAt={entry.createdAt}
           expandContent
@@ -29,11 +30,23 @@ export function HistoryDetailScreen({ route }: Props) {
 
 const styles = StyleSheet.create({
   content: {
+    gap: spacing.lg,
     padding: spacing.xl,
     paddingBottom: spacing.xxxl
   },
+  headerCard: {
+    backgroundColor: colors.surfaceAlt,
+    borderColor: colors.border,
+    borderRadius: radii.lg,
+    borderWidth: 1,
+    padding: spacing.lg
+  },
   screen: {
-    backgroundColor: colors.background,
+    backgroundColor: colors.surface,
     flex: 1
+  },
+  title: {
+    color: colors.text,
+    ...typography.titleSection
   }
 });

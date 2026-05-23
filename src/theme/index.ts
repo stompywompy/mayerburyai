@@ -1,21 +1,23 @@
 export const theme = {
+  fontFamily:
+    'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
   colors: {
-    background: "#090909",
-    surface: "#131313",
-    surfaceAlt: "#1A1A1A",
-    accent: "#8F1D2C",
-    accentSoft: "#D45A6C",
-    accentContrast: "#FFF4F6",
-    text: "#F7F9FC",
-    textMuted: "#B0A4A7",
-    border: "#342326",
-    borderStrong: "#5B2A32",
-    white: "#FFFFFF",
-    danger: "#D95656",
-    dangerSoft: "#FFC0C0",
-    navy: "#0B1736",
-    amber: "#E8A838",
-    amberSoft: "#F5C86A"
+    background: "#ffffff",
+    surface: "#ffffff",
+    surfaceAlt: "#f8fafc",
+    accent: "#3b82f6",
+    accentSoft: "#dbeafe",
+    accentContrast: "#ffffff",
+    text: "#0f172a",
+    textMuted: "#475569",
+    border: "#cbd5e1",
+    borderStrong: "#94a3b8",
+    white: "#ffffff",
+    danger: "#dc2626",
+    dangerSoft: "#b91c1c",
+    navy: "#1e293b",
+    amber: "#60a5fa",
+    amberSoft: "#bfdbfe"
   },
   spacing: {
     xxs: 4,
@@ -38,52 +40,63 @@ export const theme = {
   },
   typography: {
     eyebrow: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 13,
       fontWeight: "700" as const,
       letterSpacing: 1.2
     },
     titleHero: {
-      fontSize: 32,
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
+      fontSize: 30,
       fontWeight: "800" as const,
-      letterSpacing: -0.8,
-      lineHeight: 38
+      letterSpacing: -0.6,
+      lineHeight: 36
     },
     titleScreen: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 18,
       fontWeight: "700" as const
     },
     titleCard: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 17,
       fontWeight: "700" as const
     },
     titleSection: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 18,
       fontWeight: "700" as const
     },
     body: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 15,
       lineHeight: 23
     },
     bodySmall: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 14,
       lineHeight: 21
     },
     label: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 15,
       fontWeight: "700" as const
     },
     labelSmall: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 14,
       fontWeight: "700" as const
     },
     meta: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 12,
       fontWeight: "600" as const
     },
     button: {
+      fontFamily: 'system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: 16,
-      fontWeight: "800" as const,
-      letterSpacing: 0.2
+      fontWeight: "700" as const,
+      letterSpacing: 0.15
     }
   },
   motion: {

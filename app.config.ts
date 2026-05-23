@@ -1,6 +1,14 @@
 import "dotenv/config";
 
-import { normalizeAnthropicApiKey } from "./src/utils/anthropicApiKey";
+function normalizeAnthropicApiKey(raw: string | undefined): string {
+  const key = (raw ?? "").trim().replace(/^["']|["']$/g, "");
+
+  if (key.startsWith("Sk-ant-")) {
+    return `sk-ant-${key.slice("Sk-ant-".length)}`;
+  }
+
+  return key;
+}
 
 export default {
   expo: {
@@ -19,7 +27,8 @@ export default {
       }
     },
     web: {
-      bundler: "metro"
+      bundler: "metro",
+      name: "TeacherForge"
     },
     plugins: ["expo-asset"],
     extra: {

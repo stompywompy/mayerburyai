@@ -1,6 +1,12 @@
 import { Platform } from "react-native";
 import Constants from "expo-constants";
 
+import {
+  ANTHROPIC_API_URL,
+  extractAnthropicText,
+  parseAnthropicHttpJson,
+  serializeAnthropicRequestBody
+} from "./anthropicClient";
 import { normalizeAnthropicApiKey } from "./anthropicApiKey";
 import {
   buildAnthropicMessages,
@@ -13,14 +19,13 @@ export type { GenerationInputs, GenerationMode } from "./promptBuilder";
 const ANTHROPIC_API_KEY = normalizeAnthropicApiKey(
   Constants.expoConfig?.extra?.anthropicApiKey
 );
-const ANTHROPIC_API_URL = "https://api.anthropic.com/v1/messages";
-const ANTHROPIC_MODEL = "claude-sonnet-4-20250514";
 
 async function callAnthropicDirect(
   mode: GenerationMode,
   inputs: GenerationInputs
 ) {
   const { system, userMessage } = buildAnthropicMessages(mode, inputs);
+  const requestBody = serializeAnthropicRequestBody(system, userMessage);
 
   const response = await fetch(ANTHROPIC_API_URL, {
     method: "POST",
@@ -29,47 +34,61 @@ async function callAnthropicDirect(
       "x-api-key": ANTHROPIC_API_KEY,
       "anthropic-version": "2023-06-01"
     },
-    body: JSON.stringify({
-      model: ANTHROPIC_MODEL,
-      max_tokens: 8192,
-      system,
-      messages: [{ role: "user", content: userMessage }]
-    })
+    body: requestBody
   });
 
-  const data = await response.json();
+  const data = await parseAnthropicHttpJson(response, "Anthropic/direct");
 
   if (!response.ok) {
-    throw new Error(data?.error?.message ?? "Unable to generate content.");
+    const record = data as Record<string, unknown>;
+    const apiError = record?.error as Record<string, unknown> | undefined;
+    throw new Error(
+      typeof apiError?.message === "string"
+        ? apiError.message
+        : "Unable to generate content."
+    );
   }
 
-  const text = data?.content?.[0]?.text;
-
-  if (typeof text !== "string" || !text.trim()) {
-    throw new Error("No content was returned by Claude.");
-  }
-
-  return text;
+  return extractAnthropicText(data, "Anthropic/direct");
 }
 
 async function callAnthropicViaProxy(mode: GenerationMode, inputs: GenerationInputs) {
+  let requestBody: string;
+
+  try {
+    requestBody = JSON.stringify({ mode, inputs });
+    JSON.parse(requestBody);
+  } catch (error) {
+    console.error("[Anthropic/proxy] Invalid proxy request JSON:", error);
+    throw new Error("Could not encode generation request as JSON.");
+  }
+
   const response = await fetch("/api/generate", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ mode, inputs })
+    body: requestBody
   });
 
-  const data = await response.json();
+  const data = await parseAnthropicHttpJson(response, "Anthropic/proxy");
 
   if (!response.ok) {
-    throw new Error(data?.error?.message ?? "Unable to generate content.");
+    const record = data as Record<string, unknown>;
+    const proxyError = record?.error as Record<string, unknown> | undefined;
+    throw new Error(
+      typeof proxyError?.message === "string"
+        ? proxyError.message
+        : "Unable to generate content."
+    );
   }
 
-  if (typeof data?.text !== "string" || !data.text.trim()) {
-    throw new Error("No content was returned by Claude.");
+  if (typeof (data as Record<string, unknown>)?.text === "string") {
+    const text = (data as Record<string, unknown>).text as string;
+    if (text.trim()) {
+      return text;
+    }
   }
 
-  return data.text;
+  return extractAnthropicText(data, "Anthropic/proxy");
 }
 
 export async function generateContent(

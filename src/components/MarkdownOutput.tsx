@@ -14,11 +14,12 @@ type MarkdownOutputProps = {
 
 const markdownTheme = {
   text: colors.text,
-  heading: colors.white,
-  navy: colors.navy,
-  amber: colors.amber,
-  amberSoft: colors.amberSoft,
-  border: colors.borderStrong,
+  heading: colors.text,
+  surfaceMuted: colors.surfaceAlt,
+  slate: colors.navy,
+  accent: colors.accent,
+  accentStrong: "#1d4ed8",
+  border: colors.border,
   muted: colors.textMuted
 };
 
@@ -39,7 +40,7 @@ const s: Record<string, CSSProperties> = {
     marginTop: spacing.xl,
     marginBottom: spacing.md,
     paddingBottom: spacing.xs,
-    borderBottom: `3px solid ${markdownTheme.amber}`
+    borderBottom: `3px solid ${markdownTheme.accent}`
   },
   h2: {
     color: markdownTheme.heading,
@@ -49,10 +50,10 @@ const s: Record<string, CSSProperties> = {
     marginTop: spacing.lg,
     marginBottom: spacing.sm,
     paddingLeft: spacing.sm,
-    borderLeft: `4px solid ${markdownTheme.amber}`
+    borderLeft: `4px solid ${markdownTheme.accent}`
   },
   h3: {
-    color: markdownTheme.amberSoft,
+    color: markdownTheme.accentStrong,
     fontSize: 18,
     fontWeight: 700,
     lineHeight: 1.35,
@@ -68,7 +69,7 @@ const s: Record<string, CSSProperties> = {
     fontWeight: 800
   },
   em: {
-    color: markdownTheme.amberSoft,
+    color: markdownTheme.accentStrong,
     fontStyle: "italic"
   },
   ul: {
@@ -85,7 +86,7 @@ const s: Record<string, CSSProperties> = {
     marginBottom: spacing.xs
   },
   blockquote: {
-    borderLeft: `4px solid ${markdownTheme.amber}`,
+    borderLeft: `4px solid ${markdownTheme.accent}`,
     margin: `${spacing.md}px 0`,
     paddingLeft: spacing.md,
     color: markdownTheme.muted,
@@ -109,14 +110,14 @@ const s: Record<string, CSSProperties> = {
     lineHeight: 1.45
   },
   thead: {
-    backgroundColor: markdownTheme.navy
+    backgroundColor: markdownTheme.slate
   },
   th: {
     color: colors.white,
     fontWeight: 800,
     textAlign: "left",
     padding: `${spacing.sm}px ${spacing.md}px`,
-    borderBottom: `2px solid ${markdownTheme.amber}`,
+    borderBottom: `2px solid ${markdownTheme.accent}`,
     borderRight: `1px solid ${markdownTheme.border}`
   },
   td: {
@@ -127,8 +128,8 @@ const s: Record<string, CSSProperties> = {
     verticalAlign: "top"
   },
   codeInline: {
-    backgroundColor: markdownTheme.navy,
-    color: markdownTheme.amberSoft,
+    backgroundColor: "#eff6ff",
+    color: markdownTheme.accentStrong,
     padding: "2px 6px",
     borderRadius: 4,
     fontSize: "0.92em",
@@ -167,16 +168,14 @@ function WebMarkdown({ content }: MarkdownOutputProps) {
         return (
           <pre
             style={{
-              backgroundColor: markdownTheme.navy,
+              backgroundColor: markdownTheme.slate,
               padding: spacing.md,
               borderRadius: radii.md,
               overflowX: "auto",
               marginBottom: spacing.md
             }}
           >
-            <code style={{ color: markdownTheme.text, fontSize: 14 }}>
-              {children}
-            </code>
+            <code style={{ color: "#e2e8f0", fontSize: 14 }}>{children}</code>
           </pre>
         );
       }
@@ -197,12 +196,12 @@ function WebMarkdown({ content }: MarkdownOutputProps) {
             margin: ${spacing.lg}px 0;
             padding: ${spacing.md}px;
             overflow-x: auto;
-            background: rgba(11, 23, 54, 0.45);
+            background: ${markdownTheme.surfaceMuted};
             border-radius: ${radii.md}px;
             border: 1px solid ${markdownTheme.border};
           }
           .teacherforge-markdown tbody tr:nth-child(even) {
-            background: rgba(11, 23, 54, 0.35);
+            background: ${markdownTheme.surfaceMuted};
           }
         `
         }}

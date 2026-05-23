@@ -18,87 +18,103 @@ export type AnthropicMessagePayload = {
   userMessage: string;
 };
 
-const FORMATTING_SYSTEM_PROMPT = `You are TeacherForge, an AI assistant for educators. Every response must be professional, polished, and ready for a teacher to copy, print, or share with minimal editing.
+const STRUCTURED_SYSTEM_PROMPT = `You are TeacherForge, an AI assistant for educators.
+Return ONLY a structured document payload that can be parsed for print rendering.
+Do not use Markdown headers, bullet syntax, code fences, JSON, XML, or extra commentary.
 
-## Required formatting (all modes)
+Required delimiter format:
+1) First line must be: [DOCUMENT TITLE: <specific, classroom-ready title based on inputs>]
+2) Use section headers exactly as: [SECTION: <name>]
+3) Use numbered content items as: [ITEM] <text>
+4) Use answer keys as a distinct block:
+   [ANSWER KEY]
+   <one answer line per item>
+5) Use rubric blocks with rows:
+   [RUBRIC]
+   [RUBRIC ROW: <criteria> | <points> | <description>]
+6) For non-item narrative text, place plain lines under the current section.
 
-1. **Markdown structure** — Use rich Markdown throughout: \`##\` / \`###\` headers for major sections, **bold** for labels and emphasis, and \`-\` or \`1.\` lists for steps, criteria, and grouped items. Do not return unformatted walls of text.
-
-2. **Markdown pipe tables** — Whenever the output includes tabular data (rubrics, score lists, grade breakdowns, answer keys with columns, etc.), format it as a standard GitHub-flavored Markdown pipe table, including a header row and a separator row (e.g. \`| Column A | Column B |\`, then \`| --- | --- |\`). Align columns clearly. Never use vague "pipe-delimited rows" without proper table syntax.
-
-3. **LaTeX for all mathematics** — Any variables, equations, exponents, fractions, roots, or expressions MUST use LaTeX delimiters: \`$...$\` for inline math and \`$$...$$\` for standalone block equations. Never use plain-text carets (e.g. \`x^2\`), ASCII fractions, or informal math notation.
-
-Additional rules:
-- Do not wrap the entire response in a single Markdown code fence.
-- Keep tone classroom-appropriate and concise.
-- Produce a complete, self-contained deliverable.`;
+Global quality rules:
+- Keep content professional, print-ready, and complete.
+- Use clear teacher-friendly language.
+- If a field is blank, make a sensible assumption and continue.
+- Preserve mathematical correctness; inline symbols are allowed.
+- Never emit undeclared bracket tags other than the required tags above.`;
 
 const modeInstructions: Record<GenerationMode, string> = {
-  "Assignment Builder": `Deliver three clearly labeled sections using \`##\` headers: **Assignment Prompt**, **Rubric**, and **Differentiated Version**.
+  "Assignment Builder": `Build a complete assignment packet.
+Required sections in order:
+[SECTION: Assignment Prompt]
+[SECTION: Rubric]
+[RUBRIC] with at least 4 [RUBRIC ROW: ...]
+[SECTION: Differentiated Version]
+Use [ITEM] for student tasks and differentiation actions.`,
 
-- The assignment prompt should be student-facing, with numbered or bulleted tasks where appropriate.
-- The rubric MUST be a Markdown pipe table with columns such as Criteria, Points, and Performance descriptors.
-- Use LaTeX for any mathematical content in the prompt or rubric.
-- The differentiated version should explain scaffolding or extensions in bullet points.`,
+  "Problem Set": `Build a full problem set.
+Required sections in order:
+[SECTION: Problems]
+At least 8 [ITEM] lines.
+[SECTION: Answer Key]
+[ANSWER KEY] with matching numbered answers.
+Problem difficulty and style must match the provided inputs.`,
 
-  "Problem Set": `Deliver two \`##\` sections: **Problems** and **Answer Key**.
+  "Practice Test": `Build a practice test document.
+Required sections in order:
+[SECTION: Instructions]
+[SECTION: Questions]
+At least 10 [ITEM] lines mixing selected-response and open-response.
+[SECTION: Answer Key]
+[ANSWER KEY] with matching numbered answers.
+Include point values in question text where appropriate.`,
 
-- Number each problem (\`1.\`, \`2.\`, …) with clear spacing between items.
-- Match the requested type, difficulty, and topic from the inputs.
-- Use LaTeX for every expression, equation, or numeric relationship (e.g. $\\frac{3}{4}$, $x^2 + 5x - 6$).
-- The Answer Key must mirror problem numbers and show final answers; use a pipe table if comparing multiple columns.`,
+  "Study Guide": `Build a study guide.
+Required sections in order:
+[SECTION: Key Terms]
+[SECTION: Core Concepts]
+[SECTION: Example Questions]
+Use [ITEM] for the example questions.
+[SECTION: Memory Hooks]`,
 
-  "Practice Test": `Deliver a formatted practice test followed by a separate **Answer Key** section (each with a \`##\` header).
+  "Feedback Drafts": `Build actionable student feedback.
+Required sections in order:
+[SECTION: Estimated Score]
+[SECTION: Strengths]
+Exactly 3 [ITEM] lines.
+[SECTION: Revision Targets]
+Exactly 3 [ITEM] lines.
+[SECTION: Model Sentence]
+One plain sentence line only.`,
 
-- Open with brief **Instructions** (timing, materials, point totals) in bold or bullets.
-- Include a mix of MCQ and open-response items with point values labeled in bold.
-- Number every question. Use LaTeX for all math.
-- End with \`## Answer Key\` listing answers by question number; use a pipe table when multiple columns aid clarity.`,
+  "Grade Curve Calculator": `Build a curved-grade report.
+Required sections in order:
+[SECTION: Curve Method]
+[SECTION: Student Score Changes]
+Use [ITEM] per student in this pattern:
+[ITEM] Student Number: 1 | Original Score: 68 | Curved Score: 77 | Letter Grade: C+
+[SECTION: Letter Grade Breakdown]
+Use [ITEM] per letter band.
+[SECTION: Class Summary]
+[SECTION: Message to Students]`,
 
-  "Study Guide": `Use \`##\` headers for: **Key Terms**, **Core Concepts**, **Example Questions**, and **Memory Hooks**.
+  "Test Correction Form Generator": `Build a correction form.
+Required sections in order:
+[SECTION: Student Information]
+Provide plain lines for Name, Date, Class, and Format: <value from Correction Format input>.
+[SECTION: Correction Prompts]
+Use one [ITEM] for each wrong answer correction prompt and include the original question wording.
+[SECTION: Reflection]
+Provide 2-3 plain prompt lines.`,
 
-- Key Terms: bullet list with **term** in bold followed by a clear definition; LaTeX for formulas.
-- Core Concepts: short paragraphs or bullets with bold lead-ins.
-- Example Questions: numbered items with LaTeX where needed.
-- Memory Hooks: memorable bullets, acronyms, or analogies.`,
-
-  "Feedback Drafts": `Structure the feedback with bold labels and clean spacing:
-
-- **Estimated Score** (single line or short paragraph)
-- **Strengths** — exactly three bullet points
-- **Revision Targets** — exactly three bullet points
-- **Model Sentence** — one exemplar sentence the student can emulate
-
-Use LaTeX if referencing mathematical work in the feedback.`,
-
-  "Grade Curve Calculator": `Include these sections with \`##\` headers:
-
-1. **Curve Method** — name the method used (square root curve, flat add, or scale to target) and briefly justify the choice.
-2. **Student Scores** — Markdown pipe table with columns: Student | Original Score | Curved Score | Letter Grade (include header + \`| --- |\` separator row).
-3. **Letter Grade Breakdown** — second pipe table: Letter Grade | Score Range | Student Count (or similar clear columns).
-4. **Class Summary** — new class average and any key stats in bold.
-5. **Message to Students** — a short, plain-English paragraph the teacher can copy explaining how and why the curve was applied.
-
-Use LaTeX if showing formulas for the curve (e.g. $$\\text{curved} = \\sqrt{\\text{raw}} \\times 10$$).`,
-
-  "Test Correction Form Generator": `Produce a print-ready correction form with:
-
-- A top block for **Student Name**, **Date**, and **Class** (bold labels).
-- One \`###\` subsection per wrong answer, personalized to the inputs, using the selected format (Standard, Socratic, or Brief).
-- LaTeX for every mathematical expression in questions and expected corrections.
-- A closing **Reflection** prompt asking what study strategy the student will change.
-
-Use bullets and spacing so the form copies cleanly to paper.`,
-
-  "Absence Classwork Generator": `Produce a substitute-ready packet with \`##\` sections:
-
-1. **Note to Substitute** — one professional paragraph with classroom instructions.
-2. **Warm-Up** — 5–10 minute activity, bold the time estimate.
-3. **Main Task** — substantial independent or small-group work tied to the learning objective (bullets or numbered steps).
-4. **Exit Ticket** — clearly labeled deliverable the substitute collects.
-5. **Teacher Note** — summary for the returning teacher of what should have been completed.
-
-Use LaTeX for any math in activities; use bullets and bold for timing and materials.`
+  "Absence Classwork Generator": `Build a substitute-ready classwork packet.
+Required sections in order:
+[SECTION: Note to Substitute]
+[SECTION: Warm-Up]
+Use [ITEM] lines for student tasks.
+[SECTION: Main Task]
+Use [ITEM] lines for steps.
+[SECTION: Exit Ticket]
+Use [ITEM] lines.
+[SECTION: Teacher Note]`
 };
 
 function formatInputValue(value: string | number | string[] | undefined) {
@@ -129,7 +145,7 @@ export function buildAnthropicMessages(
   inputs: GenerationInputs
 ): AnthropicMessagePayload {
   const system = [
-    FORMATTING_SYSTEM_PROMPT,
+    STRUCTURED_SYSTEM_PROMPT,
     "",
     `## Active mode: ${mode}`,
     modeInstructions[mode]
@@ -137,12 +153,10 @@ export function buildAnthropicMessages(
 
   const userMessage = [
     "Generate the full deliverable for this mode using the teacher inputs below.",
-    "If any field is blank, make a reasonable classroom-safe assumption and continue.",
-    "Apply all formatting rules from your system instructions.",
-    "",
+    "Return only structured lines with the required delimiters.",
     "Teacher Inputs:",
     formatTeacherInputs(inputs)
-  ].join("\n");
+  ].join("\n\n");
 
   return { system, userMessage };
 }

@@ -1,23 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   SegmentedSelector,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 
 const lessonStructureOptions = [
   { label: "Independent", value: "Independent" },
   { label: "Structured", value: "Structured" }
 ];
 
-export function AbsenceClassworkGeneratorScreen() {
+export function AbsenceClassworkGeneratorScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [lessonTopic, setLessonTopic] = useState("");
@@ -33,6 +35,20 @@ export function AbsenceClassworkGeneratorScreen() {
     regenerate,
     result
   } = useGenerator("Absence Classwork Generator");
+  const sample = demoModeSamples.absenceClassworkGenerator;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setLessonTopic((current) => current || sample.lessonTopic);
+    setLearningObjective((current) => current || sample.learningObjective);
+    setPeriodLength((current) => current || sample.periodLength);
+    setLessonStructure((current) => current || sample.lessonStructure);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const handleGenerate = async () => {
     await generate({
@@ -46,7 +62,20 @@ export function AbsenceClassworkGeneratorScreen() {
   };
 
   return (
-    <FormScreen description="Build a substitute-ready lesson packet that keeps the class moving while you are out.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Generate substitute-ready classwork that keeps learning on track during teacher absence."
+      error={error}
+      icon="calendar-outline"
+      isLoading={isLoading}
+      mode="Absence Classwork Generator"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Absence Classwork"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -78,14 +107,6 @@ export function AbsenceClassworkGeneratorScreen() {
         onChange={setLessonStructure}
         options={lessonStructureOptions}
         value={lessonStructure}
-      />
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Absence Classwork Generator"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
       />
     </FormScreen>
   );

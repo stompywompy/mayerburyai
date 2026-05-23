@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 
-export function PracticeTestBuilderScreen() {
+export function PracticeTestBuilderScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [unitName, setUnitName] = useState("");
@@ -27,6 +29,20 @@ export function PracticeTestBuilderScreen() {
     regenerate,
     result
   } = useGenerator("Practice Test");
+  const sample = demoModeSamples.practiceTestBuilder;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setUnitName((current) => current || sample.unitName);
+    setTopicsList((current) => current || sample.topicsList);
+    setTimeLimit((current) => current || sample.timeLimit);
+    setPointTotal((current) => current || sample.pointTotal);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const handleGenerate = async () => {
     await generate({
@@ -40,7 +56,20 @@ export function PracticeTestBuilderScreen() {
   };
 
   return (
-    <FormScreen description="Outline the scope and constraints for a balanced practice test.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Assemble a balanced practice assessment with clear timing and scoring expectations."
+      error={error}
+      icon="clipboard-outline"
+      isLoading={isLoading}
+      mode="Practice Test"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Practice Test"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -73,14 +102,6 @@ export function PracticeTestBuilderScreen() {
         onChangeText={setPointTotal}
         placeholder="Ex: 50"
         value={pointTotal}
-      />
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Practice Test"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
       />
     </FormScreen>
   );

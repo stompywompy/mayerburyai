@@ -26,10 +26,10 @@ export function AppNavigator() {
         animation: "slide_from_right",
         contentStyle: { backgroundColor: colors.background },
         headerShadowVisible: false,
-        headerStyle: { backgroundColor: colors.background },
-        headerTintColor: colors.white,
+        headerStyle: { backgroundColor: colors.surface },
+        headerTintColor: colors.text,
         headerTitleStyle: {
-          color: colors.white,
+          color: colors.text,
           ...typography.titleScreen
         }
       }}

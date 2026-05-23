@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 
-export function GradeCurveCalculatorScreen() {
+export function GradeCurveCalculatorScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [rawScores, setRawScores] = useState("");
@@ -26,6 +28,19 @@ export function GradeCurveCalculatorScreen() {
     regenerate,
     result
   } = useGenerator("Grade Curve Calculator");
+  const sample = demoModeSamples.gradeCurveCalculator;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setRawScores((current) => current || sample.rawScores);
+    setTargetAverage((current) => current || sample.targetAverage);
+    setNotes((current) => current || sample.notes);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const handleGenerate = async () => {
     await generate({
@@ -38,7 +53,20 @@ export function GradeCurveCalculatorScreen() {
   };
 
   return (
-    <FormScreen description="Calculate a transparent class curve and generate teacher-ready explanation language.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Calculate a transparent curve and generate clear language for communicating adjustments."
+      error={error}
+      icon="stats-chart-outline"
+      isLoading={isLoading}
+      mode="Grade Curve Calculator"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Grade Curve"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -67,14 +95,6 @@ export function GradeCurveCalculatorScreen() {
         onChangeText={setNotes}
         placeholder="Ex: Drop lowest score before curving."
         value={notes}
-      />
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Grade Curve Calculator"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
       />
     </FormScreen>
   );

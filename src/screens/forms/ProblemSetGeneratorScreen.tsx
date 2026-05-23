@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Slider from "@react-native-community/slider";
 import { StyleSheet, Text, View } from "react-native";
@@ -6,15 +6,14 @@ import { StyleSheet, Text, View } from "react-native";
 import {
   CheckboxGroup,
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   SegmentedSelector,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 import { colors, spacing, typography } from "../../theme";
 
 const difficultyOptions = [
@@ -31,7 +30,10 @@ const problemTypeOptions = [
   { label: "Explanation", value: "explanation" }
 ];
 
-export function ProblemSetGeneratorScreen() {
+export function ProblemSetGeneratorScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [topic, setTopic] = useState("");
@@ -50,6 +52,22 @@ export function ProblemSetGeneratorScreen() {
     regenerate,
     result
   } = useGenerator("Problem Set");
+  const sample = demoModeSamples.problemSetGenerator;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setTopic((current) => current || sample.topic);
+    setDifficulty((current) => current || sample.difficulty);
+    setProblemTypes((current) =>
+      current.length > 0 ? current : sample.problemTypes
+    );
+    setQuantity((current) => current || sample.quantity);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const toggleProblemType = (value: string) => {
     setProblemTypes((current) =>
@@ -71,7 +89,20 @@ export function ProblemSetGeneratorScreen() {
   };
 
   return (
-    <FormScreen description="Tune the mix, difficulty, and size of a targeted practice set.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Build a targeted problem set by tuning topic, difficulty, type mix, and quantity."
+      error={error}
+      icon="grid-outline"
+      isLoading={isLoading}
+      mode="Problem Set"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Problem Set"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -117,25 +148,17 @@ export function ProblemSetGeneratorScreen() {
           <Text style={styles.scaleLabel}>25</Text>
         </View>
       </View>
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Problem Set"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
-      />
     </FormScreen>
   );
 }
 
 const styles = StyleSheet.create({
   label: {
-    color: colors.white,
+    color: colors.text,
     ...typography.label
   },
   quantityValue: {
-    color: colors.accentSoft,
+    color: colors.accent,
     ...typography.labelSmall
   },
   scaleLabel: {

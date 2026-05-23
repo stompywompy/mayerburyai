@@ -1,6 +1,7 @@
 import "react-native-gesture-handler";
 
 import { Platform } from "react-native";
+import { useEffect } from "react";
 
 if (Platform.OS === "web") {
   require("katex/dist/katex.min.css");
@@ -26,10 +27,31 @@ const navigationTheme = {
 };
 
 export default function App() {
+  useEffect(() => {
+    if (Platform.OS !== "web") {
+      return;
+    }
+
+    document.title = "TeacherForge | Salisbury School";
+    const existingIcon =
+      document.querySelector<HTMLLinkElement>('link[rel="icon"]');
+
+    if (existingIcon) {
+      existingIcon.href = "/favicon.svg";
+      return;
+    }
+
+    const link = document.createElement("link");
+    link.rel = "icon";
+    link.type = "image/svg+xml";
+    link.href = "/favicon.svg";
+    document.head.appendChild(link);
+  }, []);
+
   return (
     <SafeAreaProvider>
       <NavigationContainer theme={navigationTheme}>
-        <StatusBar style="light" />
+        <StatusBar style="dark" />
         <AppNavigator />
       </NavigationContainer>
     </SafeAreaProvider>

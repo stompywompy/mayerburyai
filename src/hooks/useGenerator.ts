@@ -7,6 +7,7 @@ import {
   generateContent
 } from "../utils/generateContent";
 import { saveOutputEntry } from "../utils/outputHistory";
+import { loadTeacherSettings } from "../utils/teacherSettings";
 
 export function useGenerator(mode: GenerationMode) {
   const [error, setError] = useState("");
@@ -23,12 +24,22 @@ export function useGenerator(mode: GenerationMode) {
     setResult("");
 
     try {
-      const nextResult = await generateContent(mode, inputs);
+      const teacherSettings = await loadTeacherSettings();
+      const enrichedInputs: GenerationInputs = {
+        ...inputs,
+        Subject:
+          typeof inputs.Subject === "string" && inputs.Subject.trim()
+            ? inputs.Subject
+            : teacherSettings.defaultSubject,
+        "Teacher Name": teacherSettings.teacherName,
+        "School Name": teacherSettings.schoolName
+      };
+      const nextResult = await generateContent(mode, enrichedInputs);
       setResult(nextResult);
 
       try {
         const savedEntry = await saveOutputEntry({
-          inputs,
+          inputs: enrichedInputs,
           mode,
           text: nextResult
         });

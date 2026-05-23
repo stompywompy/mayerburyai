@@ -1,17 +1,19 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 
-export function StudyGuideGeneratorScreen() {
+export function StudyGuideGeneratorScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [topicList, setTopicList] = useState("");
@@ -25,6 +27,18 @@ export function StudyGuideGeneratorScreen() {
     regenerate,
     result
   } = useGenerator("Study Guide");
+  const sample = demoModeSamples.studyGuideGenerator;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setTopicList((current) => current || sample.topicList);
+    setRawNotes((current) => current || sample.rawNotes);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const handleGenerate = async () => {
     await generate({
@@ -36,7 +50,20 @@ export function StudyGuideGeneratorScreen() {
   };
 
   return (
-    <FormScreen description="Gather focus topics or raw classroom notes for a student-ready study guide.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Turn topics and notes into a student-ready study guide with organized review sections."
+      error={error}
+      icon="book-outline"
+      isLoading={isLoading}
+      mode="Study Guide"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Study Guide"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -58,14 +85,6 @@ export function StudyGuideGeneratorScreen() {
         onChangeText={setRawNotes}
         placeholder="Paste raw notes here..."
         value={rawNotes}
-      />
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Study Guide"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
       />
     </FormScreen>
   );

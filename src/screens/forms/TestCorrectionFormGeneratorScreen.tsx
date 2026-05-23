@@ -1,16 +1,15 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import {
   FormField,
-  GenerateButton,
-  InlineError,
-  ResultCard,
   SegmentedSelector,
   TeacherFieldGroup
 } from "../../components/forms/FormControls";
 import { FormScreen } from "../../components/forms/FormScreen";
 import { useGenerator } from "../../hooks/useGenerator";
 import { useTeacherDefaults } from "../../hooks/useTeacherDefaults";
+import { demoModeSamples } from "../../data/demoModeSamples";
+import type { ModeScreenProps } from "./types";
 
 const correctionFormatOptions = [
   { label: "Standard", value: "Standard" },
@@ -18,7 +17,10 @@ const correctionFormatOptions = [
   { label: "Brief", value: "Brief" }
 ];
 
-export function TestCorrectionFormGeneratorScreen() {
+export function TestCorrectionFormGeneratorScreen({
+  demoModeEnabled,
+  selectedHistoryEntry
+}: ModeScreenProps) {
   const { gradeLevel, setGradeLevel, setSubject, subject } =
     useTeacherDefaults();
   const [originalQuestions, setOriginalQuestions] = useState("");
@@ -33,6 +35,19 @@ export function TestCorrectionFormGeneratorScreen() {
     regenerate,
     result
   } = useGenerator("Test Correction Form Generator");
+  const sample = demoModeSamples.testCorrectionFormGenerator;
+
+  useEffect(() => {
+    if (!demoModeEnabled) {
+      return;
+    }
+
+    setSubject((current) => current || sample.subject);
+    setGradeLevel((current) => current || sample.gradeLevel);
+    setOriginalQuestions((current) => current || sample.originalQuestions);
+    setWrongAnswers((current) => current || sample.wrongAnswers);
+    setCorrectionFormat((current) => current || sample.correctionFormat);
+  }, [demoModeEnabled, sample, setGradeLevel, setSubject]);
 
   const handleGenerate = async () => {
     await generate({
@@ -45,7 +60,20 @@ export function TestCorrectionFormGeneratorScreen() {
   };
 
   return (
-    <FormScreen description="Turn missed test items into a print-ready correction form.">
+    <FormScreen
+      selectedHistoryEntry={selectedHistoryEntry}
+      canRegenerate={canRegenerate}
+      createdAt={lastSavedEntry?.createdAt}
+      description="Convert missed test items into a clean correction workflow students can complete clearly."
+      error={error}
+      icon="create-outline"
+      isLoading={isLoading}
+      mode="Test Correction Form Generator"
+      onGenerate={() => void handleGenerate()}
+      onRegenerate={regenerate}
+      output={result}
+      title="Test Correction"
+    >
       <TeacherFieldGroup
         gradeLevel={gradeLevel}
         onChangeGradeLevel={setGradeLevel}
@@ -72,14 +100,6 @@ export function TestCorrectionFormGeneratorScreen() {
         onChange={setCorrectionFormat}
         options={correctionFormatOptions}
         value={correctionFormat}
-      />
-      <GenerateButton loading={isLoading} onPress={() => void handleGenerate()} />
-      <InlineError message={error} />
-      <ResultCard
-        createdAt={lastSavedEntry?.createdAt}
-        mode="Test Correction Form Generator"
-        onRegenerate={canRegenerate ? regenerate : undefined}
-        text={result}
       />
     </FormScreen>
   );

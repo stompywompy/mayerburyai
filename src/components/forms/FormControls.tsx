@@ -1,5 +1,7 @@
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -11,10 +13,12 @@ import * as Clipboard from "expo-clipboard";
 import * as FileSystem from "expo-file-system";
 import * as Sharing from "expo-sharing";
 
-import { MarkdownOutput } from "../MarkdownOutput";
+import { DocumentRenderer } from "../DocumentRenderer";
 import { colors, radii, spacing, typography } from "../../theme";
 import type { GenerationMode } from "../../utils/generateContent";
 import { formatSavedOutputDate } from "../../utils/outputHistory";
+import { triggerPrint } from "../../utils/printDocument";
+import { loadTeacherSettings } from "../../utils/teacherSettings";
 import { SUBJECT_OPTIONS } from "../../utils/teacherSettings";
 
 type FormFieldProps = {
@@ -108,7 +112,11 @@ export function SegmentedSelector({
               key={option.value}
               accessibilityRole="button"
               onPress={() => onChange(option.value)}
-              style={[styles.segment, selected && styles.segmentSelected]}
+              style={(state: any) => [
+                styles.segment,
+                state.hovered && styles.segmentHover,
+                selected && styles.segmentSelected
+              ]}
             >
               <Text
                 style={[
@@ -145,7 +153,11 @@ export function CheckboxGroup({
               accessibilityRole="checkbox"
               accessibilityState={{ checked: selected }}
               onPress={() => onToggle(option.value)}
-              style={[styles.checkbox, selected && styles.checkboxSelected]}
+              style={(state: any) => [
+                styles.checkbox,
+                state.hovered && styles.checkboxHover,
+                selected && styles.checkboxSelected
+              ]}
             >
               <View
                 style={[styles.checkboxMark, selected && styles.checkboxMarkOn]}
@@ -178,10 +190,11 @@ export function GenerateButton({
       accessibilityRole="button"
       disabled={disabled || loading}
       onPress={onPress}
-      style={({ pressed }) => [
+      style={(state: any) => [
         styles.generateButton,
         (disabled || loading) && styles.generateButtonDisabled,
-        pressed && styles.generateButtonPressed
+        state.hovered && styles.generateButtonHover,
+        state.pressed && styles.generateButtonPressed
       ]}
     >
       <View style={styles.generateContent}>
@@ -218,8 +231,9 @@ export function SubjectChipRow({ onSelect, value }: SubjectChipRowProps) {
               key={subjectOption}
               accessibilityRole="button"
               onPress={() => onSelect(subjectOption)}
-              style={[
+              style={(state: any) => [
                 styles.subjectChip,
+                state.hovered && styles.subjectChipHover,
                 selected && styles.subjectChipSelected
               ]}
             >
@@ -344,9 +358,55 @@ export function ResultCard({
   onRegenerate,
   text
 }: ResultCardProps) {
+  const [settingsTeacherName, setSettingsTeacherName] = useState("");
+  const [settingsSubject, setSettingsSubject] = useState("");
+  const [toastMessage, setToastMessage] = useState("");
+
+  useEffect(() => {
+    let mounted = true;
+    const hydrateSettings = async () => {
+      const settings = await loadTeacherSettings();
+      if (!mounted) {
+        return;
+      }
+      setSettingsTeacherName(settings.teacherName);
+      setSettingsSubject(settings.defaultSubject);
+    };
+    void hydrateSettings();
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   if (!text) {
     return null;
   }
+
+  const showToast = (message: string) => {
+    setToastMessage(message);
+    setTimeout(() => setToastMessage(""), 2400);
+  };
+
+  const handlePrint = (variant: "full" | "substitute" = "full") => {
+    if (Platform.OS !== "web") {
+      showToast("Print is available on the web app.");
+      return;
+    }
+
+    triggerPrint(variant);
+  };
+
+  const handleDownloadPdf = () => {
+    if (Platform.OS !== "web") {
+      showToast("PDF export is available on the web app.");
+      return;
+    }
+
+    handlePrint("full");
+    showToast("Use Save as PDF in the print dialog");
+  };
+
+  const isAbsenceMode = mode === "Absence Classwork Generator";
 
   return (
     <View style={styles.resultCard}>
@@ -363,9 +423,10 @@ export function ResultCard({
           <Pressable
             accessibilityRole="button"
             onPress={() => Clipboard.setStringAsync(text)}
-            style={({ pressed }) => [
+            style={(state: any) => [
               styles.actionButton,
-              pressed && styles.actionButtonPressed
+              state.hovered && styles.actionButtonHover,
+              state.pressed && styles.actionButtonPressed
             ]}
           >
             <Text style={styles.actionLabel}>Copy</Text>
@@ -374,21 +435,58 @@ export function ResultCard({
             <Pressable
               accessibilityRole="button"
               onPress={() => shareOutputAsTextFile(mode, text, createdAt)}
-              style={({ pressed }) => [
+              style={(state: any) => [
                 styles.actionButton,
-                pressed && styles.actionButtonPressed
+                state.hovered && styles.actionButtonHover,
+                state.pressed && styles.actionButtonPressed
               ]}
             >
               <Text style={styles.actionLabel}>Share</Text>
+            </Pressable>
+          ) : null}
+          <Pressable
+            accessibilityRole="button"
+            onPress={() => handlePrint("full")}
+            style={(state: any) => [
+              styles.actionButton,
+              state.hovered && styles.actionButtonHover,
+              state.pressed && styles.actionButtonPressed
+            ]}
+          >
+            <Text style={styles.actionLabel}>Print</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            onPress={handleDownloadPdf}
+            style={(state: any) => [
+              styles.actionButton,
+              state.hovered && styles.actionButtonHover,
+              state.pressed && styles.actionButtonPressed
+            ]}
+          >
+            <Text style={styles.actionLabel}>Download PDF</Text>
+          </Pressable>
+          {isAbsenceMode ? (
+            <Pressable
+              accessibilityRole="button"
+              onPress={() => handlePrint("substitute")}
+              style={(state: any) => [
+                styles.actionButton,
+                state.hovered && styles.actionButtonHover,
+                state.pressed && styles.actionButtonPressed
+              ]}
+            >
+              <Text style={styles.actionLabel}>Substitute Copy</Text>
             </Pressable>
           ) : null}
           {onRegenerate ? (
             <Pressable
               accessibilityRole="button"
               onPress={onRegenerate}
-              style={({ pressed }) => [
+              style={(state: any) => [
                 styles.actionButtonAccent,
-                pressed && styles.actionButtonPressed
+                state.hovered && styles.actionButtonHover,
+                state.pressed && styles.actionButtonPressed
               ]}
             >
               <Text style={styles.actionLabelAccent}>Regenerate</Text>
@@ -398,9 +496,20 @@ export function ResultCard({
       </View>
       <ScrollView nestedScrollEnabled style={expandContent ? undefined : styles.resultScroll}>
         <View style={styles.resultBody}>
-          <MarkdownOutput content={text} />
+          <DocumentRenderer
+            content={text}
+            createdAt={createdAt}
+            mode={mode ?? "Assignment Builder"}
+            subject={settingsSubject}
+            teacherName={settingsTeacherName}
+          />
         </View>
       </ScrollView>
+      {toastMessage ? (
+        <View pointerEvents="none" style={styles.toastWrap}>
+          <Text style={styles.toastText}>{toastMessage}</Text>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -418,7 +527,7 @@ const styles = StyleSheet.create({
   },
   actionButtonAccent: {
     alignItems: "center",
-    backgroundColor: "rgba(143, 29, 44, 0.16)",
+    backgroundColor: "rgba(59, 130, 246, 0.12)",
     borderColor: colors.accent,
     borderRadius: radii.sm,
     borderWidth: 1,
@@ -429,12 +538,16 @@ const styles = StyleSheet.create({
   actionButtonPressed: {
     opacity: 0.9
   },
+  actionButtonHover: {
+    borderColor: colors.border,
+    backgroundColor: colors.surfaceAlt
+  },
   actionLabel: {
     color: colors.text,
     ...typography.labelSmall
   },
   actionLabelAccent: {
-    color: colors.accentSoft,
+    color: colors.accent,
     ...typography.labelSmall
   },
   actionRow: {
@@ -464,7 +577,7 @@ const styles = StyleSheet.create({
     fontWeight: "600"
   },
   checkboxLabelSelected: {
-    color: colors.white
+    color: colors.text
   },
   checkboxMark: {
     backgroundColor: "transparent",
@@ -481,11 +594,14 @@ const styles = StyleSheet.create({
   checkboxSelected: {
     borderColor: colors.accent
   },
+  checkboxHover: {
+    borderColor: colors.border
+  },
   checkboxWrap: {
     gap: spacing.md
   },
   errorBox: {
-    backgroundColor: "rgba(217, 86, 86, 0.12)",
+    backgroundColor: "rgba(220, 38, 38, 0.08)",
     borderColor: colors.danger,
     borderRadius: radii.lg,
     borderWidth: 1,
@@ -519,6 +635,9 @@ const styles = StyleSheet.create({
   generateButtonPressed: {
     opacity: 0.92
   },
+  generateButtonHover: {
+    backgroundColor: "#2563eb"
+  },
   generateLabel: {
     color: colors.accentContrast,
     ...typography.button
@@ -546,7 +665,7 @@ const styles = StyleSheet.create({
     minHeight: 124
   },
   label: {
-    color: colors.white,
+    color: colors.text,
     ...typography.label
   },
   resultCard: {
@@ -556,7 +675,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     marginTop: spacing.xs,
-    padding: spacing.lg
+    padding: spacing.lg,
+    position: "relative"
   },
   resultBody: {
     gap: 6,
@@ -576,8 +696,23 @@ const styles = StyleSheet.create({
     maxHeight: 280
   },
   resultTitle: {
-    color: colors.white,
+    color: colors.text,
     ...typography.label
+  },
+  toastText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600"
+  },
+  toastWrap: {
+    alignItems: "center",
+    backgroundColor: "rgba(15, 23, 42, 0.92)",
+    borderRadius: radii.md,
+    bottom: spacing.md,
+    left: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    position: "absolute"
   },
   segment: {
     alignItems: "center",
@@ -606,6 +741,9 @@ const styles = StyleSheet.create({
     backgroundColor: colors.accent,
     borderColor: colors.accent
   },
+  segmentHover: {
+    borderColor: colors.border
+  },
   subjectChip: {
     alignItems: "center",
     backgroundColor: colors.surface,
@@ -630,5 +768,8 @@ const styles = StyleSheet.create({
   subjectChipSelected: {
     backgroundColor: colors.accent,
     borderColor: colors.accent
+  },
+  subjectChipHover: {
+    borderColor: colors.border
   },
 });

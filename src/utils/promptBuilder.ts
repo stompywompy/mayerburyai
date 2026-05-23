@@ -33,6 +33,10 @@ Required delimiter format:
    [RUBRIC]
    [RUBRIC ROW: <criteria> | <points> | <description>]
 6) For non-item narrative text, place plain lines under the current section.
+7) For multiple-choice answer options, use one [CHOICE] line per option immediately after the parent [ITEM] stem:
+   [CHOICE] A) <option text>
+   [CHOICE] B) <option text>
+   Never place more than one lettered option on the same line. The [ITEM] line must contain only the question stem (and point value if needed), not the A/B/C/D options.
 
 Global quality rules:
 - Keep content professional, print-ready, and complete.
@@ -53,7 +57,14 @@ Use [ITEM] for student tasks and differentiation actions.`,
   "Problem Set": `Build a full problem set.
 Required sections in order:
 [SECTION: Problems]
-At least 8 [ITEM] lines.
+At least 8 numbered questions. For each question use [ITEM] for the stem only, then [CHOICE] lines for every option.
+Example:
+[ITEM] Which expression is equivalent to 2(x + 3)? (4 points)
+[CHOICE] A) 2x + 3
+[CHOICE] B) 2x + 6
+[CHOICE] C) x + 5
+[CHOICE] D) 2x + 5
+Never write A) B) C) D) on one line or inline after the stem.
 [SECTION: Answer Key]
 [ANSWER KEY] with matching numbered answers.
 Problem difficulty and style must match the provided inputs.`,
@@ -62,10 +73,20 @@ Problem difficulty and style must match the provided inputs.`,
 Required sections in order:
 [SECTION: Instructions]
 [SECTION: Questions]
-At least 10 [ITEM] lines mixing selected-response and open-response.
+At least 10 numbered questions mixing selected-response and open-response.
+For every multiple-choice or selected-response question:
+- Put only the stem (and point value) on the [ITEM] line.
+- Put each answer option on its own [CHOICE] line with the letter prefix.
+Example:
+[ITEM] What is the slope of the line y = 3x - 2? (3 points)
+[CHOICE] A) -2
+[CHOICE] B) 2
+[CHOICE] C) 3
+[CHOICE] D) -3
+Open-response questions use [ITEM] only (no [CHOICE] lines).
 [SECTION: Answer Key]
 [ANSWER KEY] with matching numbered answers.
-Include point values in question text where appropriate.`,
+Include point values in the question stem where appropriate.`,
 
   "Study Guide": `Build a study guide.
 Required sections in order:

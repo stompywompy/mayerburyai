@@ -1,6 +1,8 @@
+import type { ItemChoice } from "./questionChoices";
+
 export type DocumentBlock =
   | { type: "paragraph"; text: string }
-  | { type: "item"; text: string; number?: number }
+  | { type: "item"; text: string; number?: number; choices?: ItemChoice[] }
   | { type: "answerKey"; lines: string[] }
   | { type: "rubric"; rows: RubricRow[] };
 
@@ -23,6 +25,7 @@ export type ParsedDocument = {
 const SECTION_RE = /^\[SECTION:\s*(.+?)\s*\]$/i;
 const TITLE_RE = /^\[DOCUMENT TITLE:\s*(.+?)\s*\]$/i;
 const ITEM_RE = /^\[ITEM\]\s*(.*)$/i;
+const CHOICE_RE = /^\[CHOICE\]\s*([A-E])[).:\s-]*\s*(.*)$/i;
 const RUBRIC_ROW_RE = /^\[RUBRIC ROW:\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\]$/i;
 const RAW_DELIMITER_RE = /^\[[A-Z][A-Z\s:_|.-]*\]$/;
 
@@ -47,6 +50,30 @@ function pushParagraph(sections: DocumentSection[], sectionIndex: number, paragr
 function ensureSection(sections: DocumentSection[]) {
   if (sections.length === 0) {
     sections.push({ title: "Generated Content", blocks: [] });
+  }
+}
+
+function appendChoiceToLastItem(
+  sections: DocumentSection[],
+  sectionIndex: number,
+  letter: string,
+  text: string
+) {
+  if (sectionIndex < 0) {
+    return;
+  }
+
+  const blocks = sections[sectionIndex].blocks;
+  for (let index = blocks.length - 1; index >= 0; index -= 1) {
+    const block = blocks[index];
+    if (block.type === "item") {
+      const existing = block.choices ?? [];
+      blocks[index] = {
+        ...block,
+        choices: [...existing, { letter: letter.toUpperCase(), text }]
+      };
+      return;
+    }
   }
 }
 
@@ -190,8 +217,20 @@ function parseStructuredDocumentInternal(raw: string): ParsedDocument {
       sections[currentSectionIndex].blocks.push({
         type: "item",
         text: itemMatch[1]?.trim() ?? "",
-        number: itemCounter
+        number: itemCounter,
+        choices: []
       });
+      continue;
+    }
+
+    const choiceMatch = safeMatch(trimmed, CHOICE_RE);
+    if (choiceMatch?.[1]) {
+      appendChoiceToLastItem(
+        sections,
+        currentSectionIndex,
+        choiceMatch[1],
+        choiceMatch[2]?.trim() ?? ""
+      );
       continue;
     }
 

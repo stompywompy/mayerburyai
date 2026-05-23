@@ -4,10 +4,13 @@ import { Platform, StyleSheet, Text, View } from "react-native";
 import { colors, spacing, typography } from "../theme";
 import {
   parseStructuredDocument,
+  type DocumentBlock,
   type DocumentSection,
   type ParsedDocument,
   type RubricRow
 } from "../utils/documentParser";
+import type { GenerationMode } from "../utils/generateContent";
+import { isQuestionSection, resolveItemDisplay } from "../utils/questionChoices";
 
 function safeParseDocument(content: string): ParsedDocument {
   try {
@@ -19,7 +22,6 @@ function safeParseDocument(content: string): ParsedDocument {
     );
   }
 }
-import type { GenerationMode } from "../utils/generateContent";
 
 type DocumentRendererProps = {
   content: string;
@@ -339,7 +341,55 @@ function TestCorrectionBlocks({ parsed }: { parsed: ParsedDocument }) {
   );
 }
 
-function renderDefaultSection(section: DocumentSection, sectionIndex: number) {
+type QuestionItemBlock = Extract<DocumentBlock, { type: "item" }>;
+
+function QuestionItem({
+  block,
+  stackChoices
+}: {
+  block: QuestionItemBlock;
+  stackChoices: boolean;
+}) {
+  const { stem, choices } = resolveItemDisplay(block);
+  const shouldStack = stackChoices && choices.length > 0;
+
+  if (!shouldStack) {
+    return (
+      <View style={styles.itemRow}>
+        <Text style={styles.itemNumber}>{block.number}.</Text>
+        <Text style={styles.itemText}>{block.text}</Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.questionBlock}>
+      <View style={styles.itemRow}>
+        <Text style={styles.itemNumber}>{block.number}.</Text>
+        <Text style={styles.questionStem}>{stem}</Text>
+      </View>
+      <View style={styles.choicesWrap}>
+        {choices.map((choice) => (
+          <View key={`${block.number}-${choice.letter}`} style={styles.choiceRow}>
+            <Text style={styles.choiceText}>
+              <Text style={styles.choiceLetter}>{choice.letter})</Text> {choice.text}
+            </Text>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function renderDefaultSection(
+  section: DocumentSection,
+  sectionIndex: number,
+  options?: { stackChoices?: boolean }
+) {
+  const stackChoices = Boolean(
+    options?.stackChoices && isQuestionSection(section.title)
+  );
+
   return (
     <View
       key={`${section.title}-${sectionIndex}`}
@@ -362,10 +412,11 @@ function renderDefaultSection(section: DocumentSection, sectionIndex: number) {
 
           if (block.type === "item") {
             return (
-              <View key={`${sectionIndex}-i-${blockIndex}`} style={styles.itemRow}>
-                <Text style={styles.itemNumber}>{block.number}.</Text>
-                <Text style={styles.itemText}>{block.text}</Text>
-              </View>
+              <QuestionItem
+                key={`${sectionIndex}-i-${blockIndex}`}
+                block={block}
+                stackChoices={stackChoices}
+              />
             );
           }
 
@@ -399,13 +450,15 @@ function renderDefaultSection(section: DocumentSection, sectionIndex: number) {
 }
 
 function renderParsedByMode(parsed: ParsedDocument, mode: GenerationMode) {
+  const stackChoices = mode === "Problem Set" || mode === "Practice Test";
+
   if (mode === "Grade Curve Calculator") {
     return parsed.sections.map((section, index) => {
       if (/student\s*score\s*changes/i.test(section.title)) {
         return <GradeCurveTable key={`curve-${index}`} parsed={parsed} />;
       }
 
-      return renderDefaultSection(section, index);
+      return renderDefaultSection(section, index, { stackChoices });
     });
   }
 
@@ -415,11 +468,13 @@ function renderParsedByMode(parsed: ParsedDocument, mode: GenerationMode) {
         return <TestCorrectionBlocks key={`correction-${index}`} parsed={parsed} />;
       }
 
-      return renderDefaultSection(section, index);
+      return renderDefaultSection(section, index, { stackChoices });
     });
   }
 
-  return parsed.sections.map((section, index) => renderDefaultSection(section, index));
+  return parsed.sections.map((section, index) =>
+    renderDefaultSection(section, index, { stackChoices })
+  );
 }
 
 export function DocumentRenderer({
@@ -579,6 +634,26 @@ const styles = StyleSheet.create({
     minWidth: 22,
     paddingTop: 1
   },
+  choiceLetter: {
+    color: colors.text,
+    fontWeight: "800"
+  },
+  choiceRow: {
+    marginBottom: spacing.xs,
+    marginLeft: spacing.lg,
+    paddingLeft: spacing.sm
+  },
+  choiceText: {
+    color: colors.text,
+    fontSize: typography.body.fontSize,
+    lineHeight: 22
+  },
+  choicesWrap: {
+    gap: spacing.xs,
+    marginBottom: spacing.sm,
+    marginLeft: spacing.xl,
+    marginTop: spacing.xs
+  },
   itemRow: {
     flexDirection: "row",
     gap: spacing.sm,
@@ -589,6 +664,15 @@ const styles = StyleSheet.create({
     color: colors.text,
     flex: 1,
     ...typography.body
+  },
+  questionBlock: {
+    marginBottom: spacing.md
+  },
+  questionStem: {
+    color: colors.text,
+    flex: 1,
+    ...typography.body,
+    marginBottom: spacing.sm
   },
   letterCell: {
     borderRightWidth: 0,
